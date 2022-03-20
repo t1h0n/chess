@@ -42,6 +42,7 @@ struct PiecePosition
 {
     std::uint8_t x;
     std::uint8_t y;
+    PiecePosition() = default;
     PiecePosition(std::uint8_t x, std::uint8_t y)
         : x{x}
         , y{y}
@@ -65,15 +66,25 @@ class Piece
 {
 protected:
     PieceColor m_piece_color;
+    PiecePosition m_position;
 
 public:
-    explicit Piece(PieceColor piece_color)
+    Piece(PieceColor piece_color, const PiecePosition& position)
         : m_piece_color(piece_color)
+        , m_position(position)
     {
     }
     PieceColor get_color() const
     {
         return m_piece_color;
+    }
+    const PiecePosition& get_position() const
+    {
+        return m_position;
+    }
+    void set_position(const PiecePosition& new_position)
+    {
+        m_position = new_position;
     }
     virtual PieceType get_piece_type() const = 0;
     virtual void visit(PieceVisitor& visitor) = 0;
@@ -83,8 +94,8 @@ public:
 class King : public Piece
 {
 public:
-    explicit King(PieceColor piece_color)
-        : Piece(piece_color)
+    King(PieceColor piece_color, const PiecePosition& position)
+        : Piece(piece_color, position)
     {
     }
     virtual void visit(PieceVisitor& visitor) override
@@ -100,8 +111,8 @@ public:
 class Queen : public Piece
 {
 public:
-    explicit Queen(PieceColor piece_color)
-        : Piece(piece_color)
+    Queen(PieceColor piece_color, const PiecePosition& position)
+        : Piece(piece_color, position)
     {
     }
     virtual void visit(PieceVisitor& visitor) override
@@ -117,8 +128,8 @@ public:
 class Bishop : public Piece
 {
 public:
-    explicit Bishop(PieceColor piece_color)
-        : Piece(piece_color)
+    Bishop(PieceColor piece_color, const PiecePosition& position)
+        : Piece(piece_color, position)
     {
     }
     virtual void visit(PieceVisitor& visitor) override
@@ -134,8 +145,8 @@ public:
 class Knight : public Piece
 {
 public:
-    explicit Knight(PieceColor piece_color)
-        : Piece(piece_color)
+    Knight(PieceColor piece_color, const PiecePosition& position)
+        : Piece(piece_color, position)
     {
     }
     virtual void visit(PieceVisitor& visitor) override
@@ -151,8 +162,8 @@ public:
 class Rook : public Piece
 {
 public:
-    explicit Rook(PieceColor piece_color)
-        : Piece(piece_color)
+    Rook(PieceColor piece_color, const PiecePosition& position)
+        : Piece(piece_color, position)
     {
     }
     virtual void visit(PieceVisitor& visitor) override
@@ -168,8 +179,8 @@ public:
 class Pawn : public Piece
 {
 public:
-    explicit Pawn(PieceColor piece_color)
-        : Piece(piece_color)
+    Pawn(PieceColor piece_color, const PiecePosition& position)
+        : Piece(piece_color, position)
     {
     }
     virtual void visit(PieceVisitor& visitor) override

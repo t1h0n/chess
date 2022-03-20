@@ -1,16 +1,16 @@
 #include <Board.hpp>
 #include <iostream>
 #include <literals.hpp>
-
+#include <optional>
 namespace
 {
 struct MoveWithSideEffects
 {
     PiecePosition position;
-    std::optional<internal::SideStats> side_effects;
+    std::optional<internal::CastlingRights> side_effects;
     MoveWithSideEffects(std::uint8_t x,
                         std::uint8_t y,
-                        std::optional<internal::SideStats> side_effects = std::nullopt)
+                        std::optional<internal::CastlingRights> side_effects = std::nullopt)
         : position(x, y)
         , side_effects(std::move(side_effects))
     {
@@ -23,8 +23,8 @@ public:
     PieceMoveDeterminer(std::vector<MoveWithSideEffects>& available_moves,
                         const PiecePosition& piece_position,
                         const ChessBoard& board,
-                        const internal::SideStats& current_stats,
-                        const internal::SideStats& other_stats)
+                        const internal::CastlingRights& current_stats,
+                        const internal::CastlingRights& other_stats)
         : m_available_moves(available_moves)
         , m_piece_position(piece_position)
         , m_board(board)
@@ -37,56 +37,42 @@ public:
         auto move_side_effects = m_current_stats;
         move_side_effects.king_side_castle_possible = false;
         move_side_effects.queen_side_castle_possible = false;
-        if (m_piece_position.x > 0_u8)
+        if (m_piece_position.x > 0)
         {
-            if (m_piece_position.y > 0_u8)
+            if (m_piece_position.y > 0)
             {
-                try_add_move(m_piece_position.x - 1_u8, m_piece_position.y - 1_u8, piece,
+                try_add_move(m_piece_position.x - 1, m_piece_position.y - 1, piece,
                              move_side_effects);
             }
-            if (m_piece_position.y < 8_u8)
+            if (m_piece_position.y < 8)
             {
-                try_add_move(m_piece_position.x - 1_u8, m_piece_position.y + 1_u8, piece,
+                try_add_move(m_piece_position.x - 1, m_piece_position.y + 1, piece,
                              move_side_effects);
             }
-            try_add_move(m_piece_position.x - 1_u8, m_piece_position.y, piece, move_side_effects);
+            try_add_move(m_piece_position.x - 1, m_piece_position.y, piece, move_side_effects);
         }
-        if (m_piece_position.x < 8_u8)
+        if (m_piece_position.x < 8)
         {
-            if (m_piece_position.y > 0_u8)
+            if (m_piece_position.y > 0)
             {
-                try_add_move(m_piece_position.x + 1_u8, m_piece_position.y - 1_u8, piece,
+                try_add_move(m_piece_position.x + 1, m_piece_position.y - 1, piece,
                              move_side_effects);
             }
-            if (m_piece_position.y < 8_u8)
+            if (m_piece_position.y < 8)
             {
-                try_add_move(m_piece_position.x + 1_u8, m_piece_position.y + 1_u8, piece,
+                try_add_move(m_piece_position.x + 1, m_piece_position.y + 1, piece,
                              move_side_effects);
             }
-            try_add_move(m_piece_position.x + 1_u8, m_piece_position.y, piece, move_side_effects);
+            try_add_move(m_piece_position.x + 1, m_piece_position.y, piece, move_side_effects);
         }
 
-        if (m_piece_position.y > 0_u8)
+        if (m_piece_position.y > 0)
         {
-            try_add_move(m_piece_position.x, m_piece_position.y - 1_u8, piece, move_side_effects);
+            try_add_move(m_piece_position.x, m_piece_position.y - 1, piece, move_side_effects);
         }
-        if (m_piece_position.y < 8_u8)
+        if (m_piece_position.y < 8)
         {
-            try_add_move(m_piece_position.x, m_piece_position.y + 1_u8, piece, move_side_effects);
-        }
-        // castling needs
-        if (!m_current_stats.in_under_check)
-        {
-            if (m_current_stats.king_side_castle_possible)
-            {
-                try_add_move(m_piece_position.x + 2_u8, m_piece_position.y, piece,
-                             move_side_effects);
-            }
-            if (m_current_stats.king_side_castle_possible)
-            {
-                try_add_move(m_piece_position.x - 2_u8, m_piece_position.y, piece,
-                             std::move(move_side_effects));
-            }
+            try_add_move(m_piece_position.x, m_piece_position.y + 1, piece, move_side_effects);
         }
     }
     virtual void visit(Queen& piece) override
@@ -103,39 +89,13 @@ public:
     }
     virtual void visit(Pawn& piece) override
     {
-        if (piece.get_color() == PieceColor::WHITE)
-        {
-            if (m_piece_position.y + 1_u8 == 7_u8)
-            {
-                auto move_side_effects = m_current_stats;
-                move_side_effects.piece_to_be_promoted
-                    = {m_piece_position.x, static_cast<std::uint8_t>(m_piece_position.y + 1_u8)};
-                try_add_pawn_forward_move(m_piece_position.x, m_piece_position.y + 1_u8, piece,
-                                          move_side_effects);
-            }
-            try_add_pawn_capture_move(m_piece_position.x + 1_u8, m_piece_position.y + 1_u8, piece);
-            try_add_pawn_capture_move(m_piece_position.x - 1_u8, m_piece_position.y + 1_u8, piece);
-        }
-        else  // needs other stats to check if en_passant is possible
-        {
-            if (m_piece_position.y - 1_u8 == 0_u8)
-            {
-                auto move_side_effects = m_current_stats;
-                move_side_effects.piece_to_be_promoted
-                    = {m_piece_position.x, static_cast<std::uint8_t>(m_piece_position.y - 1_u8)};
-                try_add_pawn_forward_move(m_piece_position.x, m_piece_position.y - 1_u8, piece,
-                                          move_side_effects);
-            }
-            try_add_pawn_capture_move(m_piece_position.x + 1_u8, m_piece_position.y + 1_u8, piece);
-            try_add_pawn_capture_move(m_piece_position.x - 1_u8, m_piece_position.y + 1_u8, piece);
-        }
     }
 
 private:
     bool try_add_move(std::uint8_t x,
                       std::uint8_t y,
                       Piece& current_piece,
-                      std::optional<internal::SideStats> side_effects = std::nullopt)
+                      std::optional<internal::CastlingRights> side_effects = std::nullopt)
     {
         if (!m_board[ y ][ x ] || m_board[ y ][ x ]->get_color() != current_piece.get_color())
         {
@@ -147,7 +107,8 @@ private:
     void try_add_pawn_forward_move(std::uint8_t x,
                                    std::uint8_t y,
                                    Piece& current_piece,
-                                   std::optional<internal::SideStats> side_effects = std::nullopt)
+                                   std::optional<internal::CastlingRights> side_effects
+                                   = std::nullopt)
     {
         if (!m_board[ y ][ x ])
         {
@@ -158,7 +119,8 @@ private:
     void try_add_pawn_capture_move(std::uint8_t x,
                                    std::uint8_t y,
                                    Piece& current_piece,
-                                   std::optional<internal::SideStats> side_effects = std::nullopt)
+                                   std::optional<internal::CastlingRights> side_effects
+                                   = std::nullopt)
     {
         if (m_board[ y ][ x ] && m_board[ y ][ x ]->get_color() != current_piece.get_color())
         {
@@ -170,8 +132,8 @@ private:
     std::vector<MoveWithSideEffects>& m_available_moves;
     const PiecePosition& m_piece_position;
     const ChessBoard& m_board;
-    const internal::SideStats& m_current_stats;
-    const internal::SideStats& m_other_stats;
+    const internal::CastlingRights& m_current_stats;
+    const internal::CastlingRights& m_other_stats;
 };
 }  // namespace
 
@@ -208,7 +170,7 @@ Board::Board()
     reset_board();
 }
 
-void Board::reset_board()
+void Board::reset_board()  // delegate this to boardgenerator
 {
     for (auto& row : m_board)
     {
@@ -217,39 +179,36 @@ void Board::reset_board()
             piece.reset();
         }
     }
-    m_white_stats.reset();
-    m_black_stats.reset();
     m_player_to_move = PieceColor::WHITE;
-    moves_without_take = 0;
     // Pawns
     for (auto i = 0_sz; i < 8_sz; ++i)
     {
-        m_board[ 1_sz ][ i ] = std::make_unique<Pawn>(PieceColor::WHITE);
-        m_board[ 6_sz ][ i ] = std::make_unique<Pawn>(PieceColor::BLACK);
+        m_board[ 1_sz ][ i ] = std::make_unique<Pawn>(
+            PieceColor::WHITE, PiecePosition(static_cast<std::uint8_t>(i), 1));
+        m_board[ 6_sz ][ i ] = std::make_unique<Pawn>(
+            PieceColor::BLACK, PiecePosition(static_cast<std::uint8_t>(i), 6));
     }
     // Rooks
-    m_board[ 0_sz ][ 0_sz ] = std::make_unique<Rook>(PieceColor::WHITE);
-    m_board[ 0_sz ][ 7_sz ] = std::make_unique<Rook>(PieceColor::WHITE);
-    m_board[ 7_sz ][ 0_sz ] = std::make_unique<Rook>(PieceColor::BLACK);
-    m_board[ 7_sz ][ 7_sz ] = std::make_unique<Rook>(PieceColor::BLACK);
+    m_board[ 0_sz ][ 0_sz ] = std::make_unique<Rook>(PieceColor::WHITE, PiecePosition(0, 0));
+    m_board[ 0_sz ][ 7_sz ] = std::make_unique<Rook>(PieceColor::WHITE, PiecePosition(0, 7));
+    m_board[ 7_sz ][ 0_sz ] = std::make_unique<Rook>(PieceColor::BLACK, PiecePosition(7, 0));
+    m_board[ 7_sz ][ 7_sz ] = std::make_unique<Rook>(PieceColor::BLACK, PiecePosition(7, 7));
     // Knight
-    m_board[ 0_sz ][ 1_sz ] = std::make_unique<Knight>(PieceColor::WHITE);
-    m_board[ 0_sz ][ 6_sz ] = std::make_unique<Knight>(PieceColor::WHITE);
-    m_board[ 7_sz ][ 1_sz ] = std::make_unique<Knight>(PieceColor::BLACK);
-    m_board[ 7_sz ][ 6_sz ] = std::make_unique<Knight>(PieceColor::BLACK);
+    m_board[ 0_sz ][ 1_sz ] = std::make_unique<Knight>(PieceColor::WHITE, PiecePosition(0, 1));
+    m_board[ 0_sz ][ 6_sz ] = std::make_unique<Knight>(PieceColor::WHITE, PiecePosition(0, 6));
+    m_board[ 7_sz ][ 1_sz ] = std::make_unique<Knight>(PieceColor::BLACK, PiecePosition(7, 1));
+    m_board[ 7_sz ][ 6_sz ] = std::make_unique<Knight>(PieceColor::BLACK, PiecePosition(7, 6));
     // Bishop
-    m_board[ 0_sz ][ 2_sz ] = std::make_unique<Bishop>(PieceColor::WHITE);
-    m_board[ 0_sz ][ 5_sz ] = std::make_unique<Bishop>(PieceColor::WHITE);
-    m_board[ 7_sz ][ 2_sz ] = std::make_unique<Bishop>(PieceColor::BLACK);
-    m_board[ 7_sz ][ 5_sz ] = std::make_unique<Bishop>(PieceColor::BLACK);
+    m_board[ 0_sz ][ 2_sz ] = std::make_unique<Bishop>(PieceColor::WHITE, PiecePosition(0, 2));
+    m_board[ 0_sz ][ 5_sz ] = std::make_unique<Bishop>(PieceColor::WHITE, PiecePosition(0, 5));
+    m_board[ 7_sz ][ 2_sz ] = std::make_unique<Bishop>(PieceColor::BLACK, PiecePosition(7, 2));
+    m_board[ 7_sz ][ 5_sz ] = std::make_unique<Bishop>(PieceColor::BLACK, PiecePosition(7, 5));
     // Queen
-    m_board[ 0_sz ][ 3_sz ] = std::make_unique<Queen>(PieceColor::WHITE);
-    m_board[ 7_sz ][ 3_sz ] = std::make_unique<Queen>(PieceColor::BLACK);
+    m_board[ 0_sz ][ 3_sz ] = std::make_unique<Queen>(PieceColor::WHITE, PiecePosition(0, 3));
+    m_board[ 7_sz ][ 3_sz ] = std::make_unique<Queen>(PieceColor::BLACK, PiecePosition(7, 3));
     // King
-    m_board[ 0_sz ][ 4_sz ] = std::make_unique<King>(PieceColor::WHITE);
-    m_board[ 7_sz ][ 4_sz ] = std::make_unique<King>(PieceColor::BLACK);
-    m_white_stats.white_king = m_board[ 0_sz ][ 4_sz ].get();
-    m_white_stats.black_king = m_board[ 7_sz ][ 4_sz ].get();
+    m_board[ 0_sz ][ 4_sz ] = std::make_unique<King>(PieceColor::WHITE, PiecePosition(0, 4));
+    m_board[ 7_sz ][ 4_sz ] = std::make_unique<King>(PieceColor::BLACK, PiecePosition(7, 4));
     auto piece_visitor = BoardPrinter();
     for (int i = 0; i < 8; ++i)
     {
@@ -264,11 +223,27 @@ void Board::reset_board()
     }
 }
 
-void internal::SideStats::reset()
+GuiChessBoard Board::get_chess_board() const
 {
-    king_side_castle_possible = true;
-    queen_side_castle_possible = true;
-    in_under_check = false;
-    en_passant_takeble = std::nullopt;
-    piece_to_be_promoted = std::nullopt;
+    GuiChessBoard board;
+    for (const auto& column : m_board)
+    {
+        for (auto& piece : column)
+        {
+            if (piece)
+            {
+                board.push_back(piece.get());
+            }
+        }
+    }
+    return board;
+}
+
+MoveResult Board::move_piece(const PiecePosition& from, const PiecePosition& to)
+{
+    if (is_move_valid(from, to))
+    {
+        return postprocess_move(from, to);
+    }
+    return MoveResult::FAILURE;
 }

@@ -3,6 +3,7 @@ project(chess)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS_INIT "-Wpedantic -Wall")
 
 add_executable(chess src/main.cpp src/Board.cpp src/Pieces.cpp)
 target_include_directories(chess PUBLIC ${CMAKE_SOURCE_DIR}/include
