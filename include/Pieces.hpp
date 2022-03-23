@@ -69,23 +69,11 @@ protected:
     PiecePosition m_position;
 
 public:
-    Piece(PieceColor piece_color, const PiecePosition& position)
-        : m_piece_color(piece_color)
-        , m_position(position)
-    {
-    }
-    PieceColor get_color() const
-    {
-        return m_piece_color;
-    }
-    const PiecePosition& get_position() const
-    {
-        return m_position;
-    }
-    void set_position(const PiecePosition& new_position)
-    {
-        m_position = new_position;
-    }
+    Piece(PieceColor piece_color, const PiecePosition& position);
+    PieceColor get_color() const;
+    const PiecePosition& get_position() const;
+    void set_position(const PiecePosition& new_position);
+
     virtual PieceType get_piece_type() const = 0;
     virtual void visit(PieceVisitor& visitor) = 0;
     virtual ~Piece() = default;
@@ -192,3 +180,24 @@ public:
         return PieceType::PAWN;
     }
 };
+
+inline Piece::Piece(PieceColor piece_color, const PiecePosition& position)
+    : m_piece_color(piece_color)
+    , m_position(position)
+{
+}
+
+inline PieceColor Piece::get_color() const
+{
+    return m_piece_color;
+}
+
+inline const PiecePosition& Piece::get_position() const
+{
+    return m_position;
+}
+
+inline void Piece::set_position(const PiecePosition& new_position)
+{
+    m_position = new_position;
+}
