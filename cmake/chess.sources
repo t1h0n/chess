@@ -1,0 +1,4 @@
+set(SOURCES
+    src/Board.cpp 
+    src/Pieces.cpp
+)

@@ -1,7 +1,6 @@
 #pragma once
-#include <cstdint>
 
-inline constexpr std::size_t operator""_sz(unsigned long long int num)
+inline constexpr std::size_t operator""_sz(unsigned long long int size)
 {
-    return num;
+    return size;
 }
