@@ -20,6 +20,7 @@ public:
      * @brief remove piece at position
      * @return true if piece was removed
      */
+
     std::unique_ptr<Piece> remove_piece(const Position& position);
 
     bool is_square_empty(const Position& position) const;

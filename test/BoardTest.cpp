@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <Board.hpp>
-
+ 
 TEST(Board, clone)
 {
     Board original_board;

@@ -207,6 +207,7 @@ inline const Position& Piece::get_position() const
     return m_position;
 }
 
+
 inline void Piece::set_position(const Position& new_position)
 {
     m_position = new_position;
