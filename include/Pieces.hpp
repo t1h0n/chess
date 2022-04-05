@@ -1,5 +1,8 @@
 #pragma once
 #include <cstdint>
+#include <functional>
+#include <iostream>
+#include <memory>
 
 class PieceVisitor;
 class Piece;
@@ -35,20 +38,22 @@ enum class PieceColor : std::uint8_t
     WHITE,
     BLACK
 };
-
 const char* to_c_str(PieceColor color);
+PieceColor get_oposite_color(PieceColor color);
 
-struct PiecePosition
+struct Position
 {
-    std::uint8_t x;
-    std::uint8_t y;
-    PiecePosition() = default;
-    PiecePosition(std::uint8_t x, std::uint8_t y)
-        : x{x}
-        , y{y}
-    {
-    }
+    std::int32_t x;
+    std::int32_t y;
+    Position() = default;
+    Position(std::int32_t x, std::int32_t y);
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Position& position)
+{
+    os << "{" << position.x << "," << position.y << "}";
+    return os;
+}
 
 class PieceVisitor
 {
@@ -66,31 +71,36 @@ class Piece
 {
 protected:
     PieceColor m_piece_color;
-    PiecePosition m_position;
+    Position m_position;
 
 public:
-    Piece(PieceColor piece_color, const PiecePosition& position);
+    Piece(PieceColor piece_color, const Position& position);
     PieceColor get_color() const;
-    const PiecePosition& get_position() const;
-    void set_position(const PiecePosition& new_position);
+    const Position& get_position() const;
+    void set_position(const Position& new_position);
 
-    virtual PieceType get_piece_type() const = 0;
+    virtual PieceType get_type() const = 0;
     virtual void visit(PieceVisitor& visitor) = 0;
     virtual ~Piece() = default;
+
+public:
+    static std::unique_ptr<Piece> get_piece_from_type(PieceType piece_type,
+                                                      PieceColor piece_color,
+                                                      const Position& piece_position);
 };
 
 class King : public Piece
 {
 public:
-    King(PieceColor piece_color, const PiecePosition& position)
+    King(PieceColor piece_color, const Position& position)
         : Piece(piece_color, position)
     {
     }
-    virtual void visit(PieceVisitor& visitor) override
+    void visit(PieceVisitor& visitor) override
     {
         visitor.visit(*this);
     }
-    virtual PieceType get_piece_type() const override
+    PieceType get_type() const override
     {
         return PieceType::KING;
     }
@@ -99,15 +109,15 @@ public:
 class Queen : public Piece
 {
 public:
-    Queen(PieceColor piece_color, const PiecePosition& position)
+    Queen(PieceColor piece_color, const Position& position)
         : Piece(piece_color, position)
     {
     }
-    virtual void visit(PieceVisitor& visitor) override
+    void visit(PieceVisitor& visitor) override
     {
         visitor.visit(*this);
     }
-    virtual PieceType get_piece_type() const override
+    PieceType get_type() const override
     {
         return PieceType::QUEEN;
     }
@@ -116,15 +126,15 @@ public:
 class Bishop : public Piece
 {
 public:
-    Bishop(PieceColor piece_color, const PiecePosition& position)
+    Bishop(PieceColor piece_color, const Position& position)
         : Piece(piece_color, position)
     {
     }
-    virtual void visit(PieceVisitor& visitor) override
+    void visit(PieceVisitor& visitor) override
     {
         visitor.visit(*this);
     }
-    virtual PieceType get_piece_type() const override
+    PieceType get_type() const override
     {
         return PieceType::BISHOP;
     }
@@ -133,15 +143,15 @@ public:
 class Knight : public Piece
 {
 public:
-    Knight(PieceColor piece_color, const PiecePosition& position)
+    Knight(PieceColor piece_color, const Position& position)
         : Piece(piece_color, position)
     {
     }
-    virtual void visit(PieceVisitor& visitor) override
+    void visit(PieceVisitor& visitor) override
     {
         visitor.visit(*this);
     }
-    virtual PieceType get_piece_type() const override
+    PieceType get_type() const override
     {
         return PieceType::KNIGHT;
     }
@@ -150,15 +160,15 @@ public:
 class Rook : public Piece
 {
 public:
-    Rook(PieceColor piece_color, const PiecePosition& position)
+    Rook(PieceColor piece_color, const Position& position)
         : Piece(piece_color, position)
     {
     }
-    virtual void visit(PieceVisitor& visitor) override
+    void visit(PieceVisitor& visitor) override
     {
         visitor.visit(*this);
     }
-    virtual PieceType get_piece_type() const override
+    PieceType get_type() const override
     {
         return PieceType::ROOK;
     }
@@ -167,21 +177,21 @@ public:
 class Pawn : public Piece
 {
 public:
-    Pawn(PieceColor piece_color, const PiecePosition& position)
+    Pawn(PieceColor piece_color, const Position& position)
         : Piece(piece_color, position)
     {
     }
-    virtual void visit(PieceVisitor& visitor) override
+    void visit(PieceVisitor& visitor) override
     {
         visitor.visit(*this);
     }
-    virtual PieceType get_piece_type() const override
+    PieceType get_type() const override
     {
         return PieceType::PAWN;
     }
 };
 
-inline Piece::Piece(PieceColor piece_color, const PiecePosition& position)
+inline Piece::Piece(PieceColor piece_color, const Position& position)
     : m_piece_color(piece_color)
     , m_position(position)
 {
@@ -192,12 +202,62 @@ inline PieceColor Piece::get_color() const
     return m_piece_color;
 }
 
-inline const PiecePosition& Piece::get_position() const
+inline const Position& Piece::get_position() const
 {
     return m_position;
 }
 
-inline void Piece::set_position(const PiecePosition& new_position)
+inline void Piece::set_position(const Position& new_position)
 {
     m_position = new_position;
 }
+inline Position::Position(std::int32_t x, std::int32_t y)
+    : x{x}
+    , y{y}
+{
+}
+inline Position operator+(const Position& lhs, const Position& rhs)
+{
+    return {lhs.x + rhs.x, lhs.y + rhs.y};
+}
+
+inline Position operator-(const Position& lhs, const Position& rhs)
+{
+    return {lhs.x - rhs.x, lhs.y - rhs.y};
+}
+
+inline Position& operator+=(Position& lhs, const Position& rhs)
+{
+    lhs.x -= rhs.x;
+    lhs.y -= rhs.y;
+    return lhs;
+}
+
+inline Position& operator-=(Position& lhs, const Position& rhs)
+{
+    lhs.x += rhs.x;
+    lhs.y += rhs.y;
+    return lhs;
+}
+
+inline bool operator==(const Position& lhs, const Position& rhs)
+{
+    return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
+inline bool operator!=(const Position& lhs, const Position& rhs)
+{
+    return !(lhs.x == rhs.x && lhs.y == rhs.y);
+}
+
+namespace std
+{
+template <>
+struct hash<Position>
+{
+    size_t operator()(const Position& posisition) const
+    {
+        return std::hash<std::int32_t>()(posisition.x) ^ std::hash<std::int32_t>()(posisition.y);
+    }
+};
+}  // namespace std
