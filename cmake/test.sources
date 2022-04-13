@@ -1,3 +1,4 @@
 set(TEST_SOURCES
     test/BoardTest.cpp
+    test/RawMoveGeneratorTest.cpp
 )
