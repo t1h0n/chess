@@ -39,13 +39,12 @@ enum class PieceColor : std::uint8_t
     BLACK
 };
 const char* to_c_str(PieceColor color);
-PieceColor get_oposite_color(PieceColor color);
+PieceColor get_opposite_color(PieceColor color);
 
 struct Position
 {
-    std::int32_t x;
-    std::int32_t y;
-    Position() = default;
+    std::int32_t x{0};
+    std::int32_t y{0};
     Position(std::int32_t x, std::int32_t y);
 };
 
@@ -229,15 +228,15 @@ inline Position operator-(const Position& lhs, const Position& rhs)
 
 inline Position& operator+=(Position& lhs, const Position& rhs)
 {
-    lhs.x -= rhs.x;
-    lhs.y -= rhs.y;
+    lhs.x += rhs.x;
+    lhs.y += rhs.y;
     return lhs;
 }
 
 inline Position& operator-=(Position& lhs, const Position& rhs)
 {
-    lhs.x += rhs.x;
-    lhs.y += rhs.y;
+    lhs.x -= rhs.x;
+    lhs.y -= rhs.y;
     return lhs;
 }
 
@@ -258,7 +257,8 @@ struct hash<Position>
 {
     size_t operator()(const Position& posisition) const
     {
-        return std::hash<std::int32_t>()(posisition.x) ^ std::hash<std::int32_t>()(posisition.y);
+        return std::hash<std::int32_t>()(posisition.x << 8)
+               ^ std::hash<std::int32_t>()(posisition.y);
     }
 };
 }  // namespace std

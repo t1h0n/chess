@@ -51,7 +51,7 @@ const char* to_c_str(PieceColor color)
     };
 }
 
-PieceColor get_oposite_color(PieceColor color)
+PieceColor get_opposite_color(PieceColor color)
 {
     return color == PieceColor::WHITE ? PieceColor::BLACK : PieceColor::WHITE;
 }

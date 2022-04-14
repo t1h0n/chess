@@ -5,6 +5,7 @@ AccessModifierOffset: -4
 AllowShortFunctionsOnASingleLine : false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
+AlignTrailingComments: true
 BinPackParameters: false
 BreakBeforeBinaryOperators: true
 BreakBeforeBraces: Allman
@@ -18,6 +19,6 @@ IndentWidth:     4
 PenaltyBreakComment: 100
 SortIncludes: true
 SortUsingDeclarations: false
-SpacesInSquareBrackets: true
+SpacesInSquareBrackets: false
 TabWidth:        4
 Standard:        c++17
