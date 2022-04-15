@@ -1,5 +1,5 @@
 set(SOURCES
     src/Board.cpp 
     src/Pieces.cpp
-    src/RawMoveGenerator.cpp
+    src/MoveGenerator.cpp
 )

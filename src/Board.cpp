@@ -1,9 +1,11 @@
 #include <Board.hpp>
 #include <stdexcept>
 
+static constexpr std::int32_t BOARD_SIZE = 7;
+
 bool Board::is_piece_position_valid(const Position& piece_position)
 {
-    return piece_position.x <= 7 && piece_position.x >= 0 && piece_position.y <= 7
+    return piece_position.x <= BOARD_SIZE && piece_position.x >= 0 && piece_position.y <= BOARD_SIZE
            && piece_position.y >= 0;
 }
 
@@ -14,7 +16,7 @@ bool Board::add_piece(std::unique_ptr<Piece> piece)
     {
         return false;
     }
-    m_board[ piece_position.y ][ piece_position.x ] = std::move(piece);
+    m_board[piece_position.y][piece_position.x] = std::move(piece);
     return true;
 }
 
@@ -24,12 +26,12 @@ std::unique_ptr<Piece> Board::remove_piece(const Position& position)
     {
         return nullptr;
     }
-    return std::move(m_board[ position.y ][ position.x ]);
+    return std::move(m_board[position.y][position.x]);
 }
 
 bool Board::is_square_empty(const Position& position) const
 {
-    return !is_piece_position_valid(position) || !m_board[ position.y ][ position.x ];
+    return !is_piece_position_valid(position) || !m_board[position.y][position.x];
 }
 
 void Board::clear_board()
@@ -63,7 +65,7 @@ const Piece& Board::get_piece_at_position(const Position& position) const
     {
         throw std::logic_error("No piece at given position");
     }
-    return *m_board[ position.y ][ position.x ];
+    return *m_board[position.y][position.x];
 }
 
 Board Board::clone() const
@@ -75,7 +77,7 @@ Board Board::clone() const
         {
             if (piece_ptr)
             {
-                cloned_board.m_board[ piece_ptr->get_position().y ][ piece_ptr->get_position().x ]
+                cloned_board.m_board[piece_ptr->get_position().y][piece_ptr->get_position().x]
                     = Piece::get_piece_from_type(piece_ptr->get_type(), piece_ptr->get_color(),
                                                  piece_ptr->get_position());
             }
