@@ -10,11 +10,9 @@ class Board;
 
 struct SpecialMovesData
 {
-    Position king_position;
-    bool king_moved{false};
-    std::optional<Position> en_passant_takable;
     std::optional<Position> queen_side_rook;
     std::optional<Position> king_side_rook;
+    std::optional<Position> en_passant_takable;
 
 public:
     bool is_ok(const Board& board, PieceColor side_to_move, bool fisher_random = false) const;
@@ -26,18 +24,14 @@ struct AvailableMoves
     NormalMoves normal_moves;
     bool king_side_castle_possible;
     bool queen_side_castle_possible;
+
+public:
+    bool empty() const;
 };
 
 SquaresUnderAttack generate_squares_under_attack(Board& board, PieceColor side_to_move);
-/**
- * @note normal moves + en_passant
- *  normal move is a moves that requires moving only 1 piece (no castling)
- *  raw means moves are not checked for being valid for current board
- */
-NormalMoves generate_normal_raw_moves(Board& board,
-                                      const SpecialMovesData& special_move_data,
-                                      PieceColor side_to_move);
 
 AvailableMoves generate_available_moves(Board& board,
                                         const SpecialMovesData& special_move_data,
-                                        PieceColor side_to_move);
+                                        PieceColor side_to_move,
+                                        bool fisher_random = false);
