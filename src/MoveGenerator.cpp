@@ -29,10 +29,6 @@ bool is_king_info_valid(const Board& board,
                         bool king_moved,
                         bool fisher_random)
 {
-    if (!is_piece_info_valid(board, piece_position, PieceType::KING, side_to_move))
-    {
-        return false;
-    }
     // if king moved than we dont care about castling
     if (king_moved)
     {
@@ -42,16 +38,16 @@ bool is_king_info_valid(const Board& board,
     {
         if (side_to_move == PieceColor::WHITE)
         {
-            return board.get_piece_at_position(piece_position).get_position() == Position{4, 0};
+            return piece_position == Position{4, 0};
         }
-        return board.get_piece_at_position(piece_position).get_position() == Position{4, 7};
+        return piece_position == Position{4, 7};
     }
     // if fisher random than we can only be sure about y position
     if (side_to_move == PieceColor::WHITE)
     {
-        return board.get_piece_at_position(piece_position).get_position().y == 0;
+        return piece_position.y == 0;
     }
-    return board.get_piece_at_position(piece_position).get_position().y == 7;
+    return piece_position.y == 7;
 }
 
 /**
@@ -116,7 +112,13 @@ bool is_en_passant_info_valid(const Board& board,
 
 bool SpecialMovesData::is_ok(const Board& board, PieceColor side_to_move, bool fisher_random) const
 {
-    return is_king_info_valid(board, king_position, side_to_move, king_moved, fisher_random)
+    if (!board.is_ok())
+    {
+        return false;
+    }
+    const auto& king_position = *board.get_king_position(side_to_move);
+    return is_king_info_valid(board, king_position, side_to_move,
+                              !king_side_rook && !queen_side_rook, fisher_random)
            && is_en_passant_info_valid(board, en_passant_takable, side_to_move)
            && is_rook_info_valid(board, king_side_rook, side_to_move, king_position, fisher_random)
            && is_rook_info_valid(board, queen_side_rook, side_to_move, king_position, fisher_random,
@@ -132,7 +134,7 @@ public:
 public:
     MoveGenerator(Board& board, const SpecialMovesData& special_move_data, PieceColor side_to_move);
     void generate_moves();
-    const MovesContainer& get_available_moves() const;
+    MovesContainer&& get_available_moves();
     bool is_king_side_castle_possible() const;
     bool is_queen_side_castle_possible() const;
 
@@ -159,7 +161,7 @@ public:
     RawMoveGenerator(const Board& board,
                      const SpecialMovesData& special_move_data,
                      PieceColor side_to_move);
-    const MovesContainer& get_available_raw_moves() const;
+    MovesContainer&& get_available_raw_moves();
     void visit(King& piece) override;
     void visit(Queen& piece) override;
     void visit(Bishop& piece) override;
@@ -182,7 +184,7 @@ class SquaresUnderAttackGenerator : public PieceVisitor
 {
 public:
     SquaresUnderAttackGenerator(const Board& board, PieceColor side_to_move);
-    const std::unordered_set<Position>& get_squares_under_attack() const;
+    std::unordered_set<Position>&& get_squares_under_attack();
     void visit(King& piece) override;
     void visit(Queen& piece) override;
     void visit(Bishop& piece) override;
@@ -221,10 +223,9 @@ bool MoveGenerator::is_queen_side_castle_possible() const
 {
     return m_queen_side_castle_possible;
 }
-
-const MoveGenerator::MovesContainer& MoveGenerator::get_available_moves() const
+MoveGenerator::MovesContainer&& MoveGenerator::get_available_moves()
 {
-    return m_available_moves;
+    return std::move(m_available_moves);
 }
 
 RawMoveGenerator::RawMoveGenerator(const Board& board,
@@ -243,14 +244,14 @@ SquaresUnderAttackGenerator::SquaresUnderAttackGenerator(const Board& board,
 {
 }
 
-const RawMoveGenerator::MovesContainer& RawMoveGenerator::get_available_raw_moves() const
+RawMoveGenerator::MovesContainer&& RawMoveGenerator::get_available_raw_moves()
 {
-    return m_available_moves;
+    return std::move(m_available_moves);
 }
 
-const std::unordered_set<Position>& SquaresUnderAttackGenerator::get_squares_under_attack() const
+std::unordered_set<Position>&& SquaresUnderAttackGenerator::get_squares_under_attack()
 {
-    return m_squares_under_attack;
+    return std::move(m_squares_under_attack);
 }
 
 template <typename T>
@@ -486,26 +487,32 @@ void RawMoveGenerator::visit(Pawn& piece)
         }
     };
     const auto try_add_normal_square = [this, &piece](const Position& piece_position) {
-        if (!Board::is_piece_position_valid(piece_position))
-        {
-            return;
-        }
         if (m_board.is_square_empty(piece_position))
         {
             m_available_moves[piece.get_position()].insert(piece_position);
+            return true;
         }
+        return false;
     };
     if (piece.get_color() == PieceColor::WHITE)
     {
         try_add_attacking_square(piece.get_position() + Position{1, 1});
         try_add_attacking_square(piece.get_position() + Position{-1, 1});
-        try_add_normal_square(piece.get_position() + Position{0, 1});
+        if (try_add_normal_square(piece.get_position() + Position{0, 1})
+            && piece.get_position().y == 1)
+        {
+            try_add_normal_square(piece.get_position() + Position{0, 2});
+        }
     }
     else
     {
         try_add_attacking_square(piece.get_position() + Position{1, -1});
         try_add_attacking_square(piece.get_position() + Position{-1, -1});
-        try_add_normal_square(piece.get_position() + Position{0, -1});
+        if (try_add_normal_square(piece.get_position() + Position{0, -1})
+            && piece.get_position().y == 6)
+        {
+            try_add_normal_square(piece.get_position() + Position{0, -2});
+        }
     }
 }
 
@@ -514,6 +521,7 @@ void MoveGenerator::generate_normal_moves()
     RawMoveGenerator raw_move_generator{m_board, m_special_move_data, m_side_to_move};
     m_board.apply_piece_visitor(raw_move_generator);
     const auto& available_moves = raw_move_generator.get_available_raw_moves();
+    const auto& default_king_position = *m_board.get_king_position(m_side_to_move);
     for (const auto& move_list : available_moves)
     {
         for (const auto& move_position : move_list.second)
@@ -522,11 +530,11 @@ void MoveGenerator::generate_normal_moves()
             auto moving_piece = new_board.remove_piece(move_list.first);
             const auto& king_position = moving_piece->get_type() == PieceType::KING
                                             ? move_position
-                                            : m_special_move_data.king_position;
+                                            : default_king_position;
             const auto taken_piece = new_board.remove_piece(move_position);
             if (taken_piece && taken_piece->get_type() == PieceType::KING)
             {
-                throw std::logic_error("Invalid board! Can't capture king!");
+                throw std::logic_error("King under check!");
             }
             moving_piece->set_position(move_position);
             new_board.add_piece(std::move(moving_piece));
@@ -541,7 +549,7 @@ void MoveGenerator::generate_normal_moves()
 void MoveGenerator::generate_special_moves()
 {  // TODO: add support of fisher random
     // if king moved no castling is possible
-    if (m_special_move_data.king_moved)
+    if (!m_special_move_data.king_side_rook && !m_special_move_data.queen_side_rook)
     {
         return;
     }
@@ -551,26 +559,26 @@ void MoveGenerator::generate_special_moves()
     const auto& squares_under_attack = squares_under_attack_generator.get_squares_under_attack();
 
     // if king is under attack no castling is possible
-    if (squares_under_attack.count(m_special_move_data.king_position))
+    const auto& king_position = *m_board.get_king_position(m_side_to_move);
+    if (squares_under_attack.count(king_position))
     {
         return;
     }
     const auto can_move_through_square = [this, &squares_under_attack](const Position& square) {
         return m_board.is_square_empty(square) && !squares_under_attack.count(square);
     };
-    const auto kings_y_coord = m_special_move_data.king_position.y;
     // king side
     if (m_special_move_data.king_side_rook)
     {
-        m_king_side_castle_possible = can_move_through_square(Position{5, kings_y_coord})
-                                      && can_move_through_square({6, kings_y_coord});
+        m_king_side_castle_possible = can_move_through_square(Position{5, king_position.y})
+                                      && can_move_through_square({6, king_position.y});
     }
     // queen side
     if (m_special_move_data.queen_side_rook)
     {
-        m_queen_side_castle_possible = m_board.is_square_empty({1, kings_y_coord})
-                                       && can_move_through_square({2, kings_y_coord})
-                                       && can_move_through_square({3, kings_y_coord});
+        m_queen_side_castle_possible = m_board.is_square_empty({1, king_position.y})
+                                       && can_move_through_square({2, king_position.y})
+                                       && can_move_through_square({3, king_position.y});
     }
 }
 
@@ -587,13 +595,27 @@ void MoveGenerator::generate_moves()
 {
     if (!m_special_move_data.is_ok(m_board, m_side_to_move))
     {
-        std::cerr << __PRETTY_FUNCTION__ << " INVALID SPECIAL_MOVE_DATA\n";
+        std::cerr << __PRETTY_FUNCTION__ << " Invalid special_mode_data\n";
         return;
     }
-    generate_normal_moves();
-    generate_special_moves();
+    try
+    {
+        generate_normal_moves();
+        generate_special_moves();
+    }
+    catch (const std::logic_error&)
+    {
+        m_available_moves.clear();
+        m_queen_side_castle_possible = false;
+        m_king_side_castle_possible = false;
+    }
 }
 }  // namespace
+
+bool AvailableMoves::empty() const
+{
+    return normal_moves.empty() && !queen_side_castle_possible && !king_side_castle_possible;
+}
 
 SquaresUnderAttack generate_squares_under_attack(Board& board, PieceColor side_to_move)
 {
@@ -602,18 +624,10 @@ SquaresUnderAttack generate_squares_under_attack(Board& board, PieceColor side_t
     return squares_under_attack_generator.get_squares_under_attack();
 }
 
-NormalMoves generate_raw_available_moves(Board& board,
-                                         const SpecialMovesData& special_move_data,
-                                         PieceColor side_to_move)
-{
-    RawMoveGenerator raw_moves_generator{board, special_move_data, side_to_move};
-    board.apply_piece_visitor(raw_moves_generator);
-    return raw_moves_generator.get_available_raw_moves();
-}
-
 AvailableMoves generate_available_moves(Board& board,
                                         const SpecialMovesData& special_move_data,
-                                        PieceColor side_to_move)
+                                        PieceColor side_to_move,
+                                        bool fisher_random)
 {
     MoveGenerator move_generator{board, special_move_data, side_to_move};
     move_generator.generate_moves();

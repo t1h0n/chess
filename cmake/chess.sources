@@ -2,4 +2,7 @@ set(SOURCES
     src/Board.cpp 
     src/Pieces.cpp
     src/MoveGenerator.cpp
+    src/GameController.cpp
+    src/ChessView.cpp
+    src/ResourceManager.cpp
 )
